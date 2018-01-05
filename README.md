@@ -6,7 +6,7 @@ Alfred is a (very much a work in progress!) CI/CD server written in Javascript f
 (Coming soon!) Install the Alfred server globally:
 
 ```
-// npm install -g alfred-server
+// npm install -g alfred-ci
 ```
 
 # Startup
@@ -14,7 +14,7 @@ Alfred is a (very much a work in progress!) CI/CD server written in Javascript f
 To start Alred, you'd usually run it with the config path you'd like to use. The config path contains your overall config, encrypted credentials and the pipelines themselves:
 
 ```
-alfred-server ./path-to-a-suitable-config-directory/
+alfred-ci ./path-to-a-suitable-config-directory/
 ```
 
 If you don't provide a path, `./configAndData/` is used by default. If the directory is empty then Alfred will create the `pipelines` directory and copy in a default `settings.js` too.
