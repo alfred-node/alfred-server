@@ -1,0 +1,29 @@
+{
+  "name": "alfred",
+  "version": "0.0.1",
+  "description": "Alfred is a CI/CD server for Node.",
+  "main": "start.js",
+  "scripts": {
+    "start": "node ./source/start.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "async": "^2.6.0",
+    "body-parser": "^1.18.2",
+    "colors": "^1.1.2",
+    "cookie-parser": "^1.4.3",
+    "crypto-json": "^2.0.0",
+    "express": "^4.16.2",
+    "glob": "^7.1.2",
+    "jsonfile": "^4.0.0",
+    "morgan": "^1.9.0",
+    "mysql": "^2.15.0",
+    "node-ssh": "^5.0.0",
+    "nodegit": "^0.20.3",
+    "nodemailer": "^4.4.0",
+    "password-hash-and-salt": "^0.1.4",
+    "randomstring": "^1.1.5",
+    "ssh2": "^0.5.5"
+  }
+}

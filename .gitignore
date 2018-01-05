@@ -1,0 +1,5 @@
+/configAndData/credentials.json
+/configAndData/pipelines/*
+/node_modules
+#Not the sample
+!/configAndData/pipelines/pipeline.js
