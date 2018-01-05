@@ -6,7 +6,7 @@ module.exports = app => (request, response) => {
 	} = request.query;
 	
 	// Instantly run it (TODO: Internally should check if it's already running):
-	app.pipeline.run(name);
+	app.pipeline.run(name, {webhook: request.body});
 	
 	// The above returns a promise but this request won't wait for it.
 	response.send({name});
