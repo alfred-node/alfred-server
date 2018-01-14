@@ -22,7 +22,7 @@ module.exports = app => {
 		/*
 		* Data directory. Note that you can override this if you're e.g. creating pipes on the fly.
 		*/
-		this.path = './configAndData/pipelines/' + id + '/';
+		this.path = app.settings.configPath + '/pipelines/' + id + '/';
 		
 		/*
 		* A running pipe cd's to this.
@@ -36,10 +36,16 @@ module.exports = app => {
 		
 		/*
 		* A memory workspace shared by a running pipeline.
-		* Used to e.g. hold references to SSH servers or repositories.
+		* Used to e.g. hold references to SSH servers or repositories as well as the version number.
 		* (added as e.g. workspace.gitRepositories or workspace.sshServers)
 		*/
-		this.workspace = {};
+		this.workspace = {
+			/*
+			* Populated if a stage fails. When one does, the error is added here and then all following stages 
+			* are checked for a 'runOnError' property
+			*/
+			errors: []
+		};
 		
 		/* 
 		* Import another pipeline into this one. Runs the pipeline function passing it this instance.
@@ -50,7 +56,7 @@ module.exports = app => {
 			
 			if(typeof pipelineNameOrFunction === "string"){
 				// Include it:
-				pipelineNameOrFunction = require('../../../templates/pipelines/' + pipelineNameOrFunction);
+				pipelineNameOrFunction = require(app.settings.templatePath + '/pipelines/' + pipelineNameOrFunction);
 			}
 			
 			// Always return a promise:
@@ -135,7 +141,7 @@ module.exports = app => {
 			
 			if(typeof stageMethodOrFileName === "string"){
 				// Include it:
-				stageMethodOrFileName = require('../../../templates/stages/' + stageMethodOrFileName);
+				stageMethodOrFileName = require(app.settings.templatePath + '/stages/' + stageMethodOrFileName);
 			}
 			
 			var stage = {
@@ -143,7 +149,8 @@ module.exports = app => {
 				pipeline: this,
 				workspace: this.workspace,
 				method: stageMethodOrFileName,
-				config: stageConfigOverrides
+				config: stageConfigOverrides,
+				runOnError: stageMethodOrFileName.runOnError
 			};
 			
 			return stage;
@@ -240,68 +247,166 @@ module.exports = app => {
 		};
 		
 		/*
-		* Runs this pipeline, optionally overriding settings.
-		* NOTE: This will change the current working directory to the workspace.
-		* If you want to have multiple pipes running at once, you must spawn a child process.
+		* The number of stages.
 		*/
-		this.run = function(settingsOverride, events){
-			
-			// Final config override:
-			this.overrideConfig(settingsOverride);
+		this.stageCount = () => this.stages.length;
+		
+		/*
+		* Gets the index of the given stage.
+		*/
+		this.stageIndex = stage => this.stages.indexOf(stage);
+		
+		/*
+		* Progress of a given stage.
+		*/
+		this.stageProgress = stage => this.stageIndex(stage) / this.stageCount();
+		
+		var __workspace = this.workspace;
+		
+		/*
+		* Runs a block of stages in series.
+		* If any fail, it searches for "runOnError" stages and runs those.
+		*/
+		function runStages(stageArray, events, buildInfo){
 			
 			return new Promise((success, reject) => {
 				
+				function onReject(err, stageIndex){
+					// Runs when a stage fails. Find any "runOnError" stages first:
+					__workspace.errors.push(err);
+					
+					var stagesToRunOnError = stageArray.filter((entry, index) => index > stageIndex && entry.runOnError);
+					var errorStages = null;
+						
+					if(stagesToRunOnError.length){
+						// We've got a set of stages to run!
+						errorStages = runStages(stagesToRunOnError, events, buildInfo);
+					}else{
+						errorStages = true;
+					}
+					
+					Promise.resolve(errorStages)
+						.then(() => app.build.setStatus(buildInfo.id, 1))
+						.then(() => {
+							if(events && events.onFailed){
+								events.onFailed(this, err);
+							}
+							throw err;
+						})
+						.catch(reject);
+				}
+				
 				// For each stage..
-				var stageMethods = this.stages.map( (stage, stageIndex) => {
+				var stageMethods = stageArray.map( (stage, stageIndex) => {
 					
 					// Return an async method:
 					return callback => {
 						
 						try{
+							if(stage.config.forceFailure){
+								// Useful for testing what happens when particular stages fail. Just add 'forceFailure' to any stages config.
+								throw new Error("Forced a failure of " + stage.name + " via the stages configuration. Remove 'forceFailure' from the config.");
+							}
+							
 							// Run the method:
 							if(events && events.onRunStage){
-								events.onRunStage(stage, stageIndex, this.stages.length, this);
+								events.onRunStage(stage, app, this, stage.config);
 							}
 							var result = stage.method(stage, app, this, stage.config);
 							
 							// It probably returned a promise, so resolve it:
-							Promise.resolve(result).then(callback).catch(reject);
+							Promise.resolve(result).then(callback).catch(e => onReject(e, stageIndex));
 						}catch(e){
-							reject(e);
+							onReject(e, stageIndex);
 						}
 						
 					}
 				});
 				
+				// -run now-
+				async.series(stageMethods, success);
+			});
+		}
+		
+		/*
+		* Runs this pipeline, optionally overriding settings.
+		* NOTE: This will change the current working directory to the workspace. It will also generate a new build in the database.
+		* If you want to have multiple pipes running at once, you must spawn a child process.
+		*/
+		this.run = function(settingsOverride, events){
+			
+			this.workspace.startTime = new Date();
+			
+			// First, generate the build metadata:
+			return app.build.create(this.id, 2).then(buildInfo => {
+				
+				// Final config override:
+				this.overrideConfig(settingsOverride);
+				
+				// Set the version into the workspace:
+				this.workspace.version = {
+					major: buildInfo.versionMajor,
+					minor: buildInfo.versionMinor,
+					patch: buildInfo.versionPatch
+				};
+				
+				// And a general ref to the build info:
+				this.workspace.build = buildInfo;
+				
+				// Call the started event:
+				if(events && events.onStart){
+					events.onStart(this);
+				}
+			
 				// Change to the pipeline's workspace:
-				console.log(this.workspaceDir());
 				process.chdir(this.workspaceDir());
 				
-				// -run now-
-				async.series(stageMethods, () => {
-					
+				return runStages(this.stages, events, buildInfo).then(() => {
 					// Restore cd:
 					process.chdir(defaultCWD);
 					
-					// Ok!
-					success();
-				});
+					// Update the build status:
+					return app.build.setStatus(buildInfo.id, 0).then(() => {
+						
+						if(events && events.onSuccess){
+							events.onSuccess(this);
+						}
+						
+					})
+					
+				})
 				
 			});
-			
 		};
 	};
 	
 	/*
 	* Runs the pipeline with the given ID.
 	*/
-	app.pipeline.run = function(id, settingsOverride){
+	app.pipeline.run = function(id, settingsOverride, events){
 		
 		var pipeline = new app.pipeline(id);
 		
-		var pipeFile = require('../../.' + pipeline.path + 'pipeline.js');
+		var pipeFile = require(pipeline.path + 'pipeline.js');
 		
-		return Promise.resolve(pipeFile(pipeline, app)).then(() => pipeline.run(settingsOverride));
+		return Promise.resolve(pipeFile(pipeline, app)).then(() => pipeline.run(settingsOverride, events));
 	};
+	
+	/*
+	* Gets the metadata for a given pipeline.
+	*/
+	app.pipeline.getInfo = function(id){
+		
+		return new Promise((success, reject) => {
+			app.database.query('select * from pipelines where id=?', [id], (err, results) => {
+				if(err){
+					reject(err);
+					return;
+				}
+				success(results[0]);
+			})
+		});
+		
+	}
 	
 };

@@ -25,6 +25,35 @@ var moduleLoader = require('./modules/module-loader');
 // The startup function. A user optionally provides the config into this.
 function startAlfred(settings) {
 	
+	if(!settings){
+		settings = {};
+	}
+	
+	if(settings.loadCommandLine){
+		// Load the command line args:
+		const commandLineArgs = require('command-line-args');
+		
+		settings.commandLine = commandLineArgs([
+			{ name: 'config', alias: 'c', type: String },
+			{ name: 'templates', alias: 't', type: String }
+		]);
+		
+		// Get the config paths:
+		settings.configPath = settings.configPath || settings.commandLine.config;
+		settings.templatePath = settings.templatePath || settings.commandLine.templates;
+	}
+	
+	if(!settings.configPath){
+		settings.configPath = './configAndData';
+	}
+	
+	if(!settings.templatePath){
+		settings.templatePath = './templates';
+	}
+	
+	settings.templatePath = path.resolve(settings.templatePath);
+	settings.configPath = path.resolve(settings.configPath);
+	
 	// Setup express (the web server):
 	var expressHttp = express();
 	expressHttp.use(logger('dev'));
@@ -44,12 +73,16 @@ function startAlfred(settings) {
 			Or if you have multiple enigma2 TV receivers, the search can be sent to just one of them.
 			I.e. the way search is distributed becomes something the provider can define.
 		*/
-		search: {}
+		search: {},
+		/*
+		* Webhook handlers. Used to autodetect the source of a webhook and then apply more generic config.
+		*/
+		webhooks: []
 	};
 	
 	// Step 2. Load the config. Using Object.assign here so we can essentially overwrite 
 	// defaults with the optional config being passed in.
-	app.settings = Object.assign(settings || {}, require('../configAndData/settings.js'));
+	app.settings = Object.assign(settings || {}, require( settings.configPath + '/settings.js'));
 	
 	// Return a promise so the caller can know when Alfred is ready to go:
 	return new Promise((success, failed) => {
@@ -81,7 +114,9 @@ function startAlfred(settings) {
 // Were we started directly from the command line, or included as part of some other package?
 if (require.main === module) {
 	// We're being run directly from the command line. Immediately call the startup function.
-	startAlfred();
+	startAlfred({
+		loadCommandLine: true
+	});
 }else{
 	// Somebody is including us. Export the function.
 	module.exports = startAlfred;

@@ -1,6 +1,5 @@
 var cryptoJSON = require('crypto-json');
 var jsonfile = require('jsonfile');
-var lookupPath = './configAndData/credentials.json';
 
 
 module.exports = app => {
@@ -8,6 +7,8 @@ module.exports = app => {
 	// Get the settings:
 	var settings = app.settings;
 	
+	var lookupPath = settings.configPath + '/credentials.json';
+
 	// Get the global key:
 	var passKey = settings.cryptkey;
 	
