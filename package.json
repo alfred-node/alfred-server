@@ -27,6 +27,7 @@
     "node-ssh": "^5.0.0",
     "nodegit": "^0.20.3",
     "nodemailer": "^4.4.0",
+    "os-service": "^1.5.0",
     "password-hash-and-salt": "^0.1.4",
     "randomstring": "^1.1.5",
     "slack-notify": "^0.1.6",
