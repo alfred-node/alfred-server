@@ -3,25 +3,24 @@ Alfred is a (very much a work in progress!) CI/CD server written in Javascript f
 
 # Installation
 
-(Coming soon!) Install the Alfred server globally:
+```
+npm install -g alfred-ci
+alfred-ci
+```
 
-```
-// npm install -g alfred-ci
-```
+You'll need to manually edit the database connection details in configAndData/settings.js and to setup the schema, run the `database/install.sql` file (this will be happening automatically soon).
+
+If you see install errors due to `node-gyp`, make sure you have run `apt-get install build-essentials` on Linux and `npm i -g windows-build-tools` on Windows.
 
 # Startup
 
 To start Alred, you'd usually run it with the config path you'd like to use. The config path contains your overall config, encrypted credentials and the pipelines themselves:
 
 ```
-alfred-ci ./path-to-a-suitable-config-directory/
+alfred-ci --config ./path-to-a-suitable-config-directory/
 ```
 
 If you don't provide a path, `./configAndData/` is used by default. If the directory is empty then Alfred will create the `pipelines` directory and copy in a default `settings.js` too.
-
-# Configuration
-
-Alfred currently uses a MySQL database to store its historical run information. If Alfred doesn't have any database config (in a file called `settings.js` in the config directory) then it will request the database connection details when it runs.
 
 # Creating your first pipeline
 
