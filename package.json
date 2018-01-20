@@ -1,6 +1,6 @@
 {
   "name": "alfred-ci",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Alfred is a CI/CD server for Node.",
   "main": "start.js",
   "scripts": {
