@@ -9,6 +9,10 @@
   "bin": {
     "alfred-ci": "./bin/alfred-ci.js"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alfred-node/alfred-server.git"
+  },
   "author": "",
   "preferGlobal": true,
   "license": "MIT",

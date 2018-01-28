@@ -14,7 +14,7 @@ If you see install errors due to `node-gyp`, make sure you have run `apt-get ins
 
 # Startup
 
-To start Alred, you'd usually run it with the config path you'd like to use. The config path contains your overall config, encrypted credentials and the pipelines themselves:
+To start Alfred, you'd usually run it with the config path you'd like to use. The config path contains your overall config, encrypted credentials and the pipelines themselves:
 
 ```
 alfred-ci --config ./path-to-a-suitable-config-directory/
@@ -124,6 +124,6 @@ POST to `http://localhost:8088/v1/credential/add` or `http://localhost:8088/v1/c
 }
 ```
 
-'alfreds-github-login' is now a permanently stored credential. You can use that textual name to reference it when it's needed (in stages that support it). Stages that use sensitive credentials can load it using:
+'alfreds-github-login' is now a permanently stored encrypted credential. You can use that textual name to reference it when it's needed (in stages that support it). Stages that use sensitive credentials can load it using:
 
 `app.credentials.load('alfreds-github-login')` (if you pass something that isn't a string, then it will just return whatever you gave it in order to easily support inline credentials too).
