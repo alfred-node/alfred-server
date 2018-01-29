@@ -27,7 +27,9 @@ module.exports = (stage, app) => {
 	}
 	
 	// Branch to use:
-	var branch = config.branch || "master";
+	if(!config.branch){
+		config.branch = "master";
+	}
 	
 	// Local directory to checkout to:
 	if(!config.localPath){
@@ -36,7 +38,7 @@ module.exports = (stage, app) => {
 	}
 	
 	// Update and checkout the branch now:
-	return app.git.update(remotePath, config.localPath, branch, config)
+	return app.git.update(remotePath, config.localPath, config.branch, config)
 		.then(repository => {
 			// Keep a reference to the repository itself and the local checkout path.
 			if(!stage.workspace.gitRepositories){
@@ -44,14 +46,26 @@ module.exports = (stage, app) => {
 			}
 			
 			// Cache the config in the pipelines memory workspace so other stages can use the reference directly:
-			stage.workspace.gitRepositories.push({
+			var pullInfo = {
 				repository,
 				localPath: config.localPath,
+				branch: config.branch,
+				url: remotePath,
 				config
-			});
+			};
+			
+			stage.workspace.gitRepositories.push(pullInfo);
 			
 			// Checkout now:
-			return app.git.checkout(repository, branch, config);
+			return app.git.checkout(repository, config.branch, config).then(() => {
+				return repository.getHeadCommit().then(commit => {
+					// Write the actual commit info to the config:
+					config.commit = commit.sha();
+					
+					// Keep it in the pull info too:
+					pullInfo.head = commit;
+				});
+			});
 		});
 }
 

@@ -263,6 +263,8 @@ module.exports = app => {
 		
 		var __workspace = this.workspace;
 		
+		this.saveStages = buildInfo => app.build.saveStageConfig(buildInfo.id, this.stages);
+		
 		/*
 		* Runs a block of stages in series.
 		* If any fail, it searches for "runOnError" stages and runs those.
@@ -338,7 +340,7 @@ module.exports = app => {
 			this.workspace.startTime = new Date();
 			
 			// First, generate the build metadata:
-			return app.build.create(this.id, 2).then(buildInfo => {
+			return app.build.create(this.id, 2, this.stages).then(buildInfo => {
 				
 				// Final config override:
 				this.overrideConfig(settingsOverride);
@@ -375,6 +377,8 @@ module.exports = app => {
 					})
 					
 				})
+				.catch(err => this.saveStages(buildInfo).then(() => {throw err;}))
+				.then(() => this.saveStages(buildInfo));
 				
 			});
 		};

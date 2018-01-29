@@ -43,6 +43,68 @@ module.exports = app => {
 	};
 	
 	/*
+	* Saves the stage config for the given list of stages.
+	*/
+	app.build.saveStageConfig = (buildId, stages) => {
+		
+		return new Promise((success, reject) => {
+			
+			var stageValues = stages.map((stage, index) => {
+				return [
+					buildId,
+					index,
+					stage.name,
+					JSON.stringify(stage.config)
+				];
+			});
+			
+			app.database.query('INSERT into build_stage_properties (build, stage, stageName, properties) values ?', [stageValues], function(err, results){
+				// Ok!
+				success(results);
+			});
+		});
+	};
+	
+	/*
+	* Gets the stage from a successful build which matches the given stage properties.
+	*/
+	app.build.getSuccessfulStage = function(pipelineId, stageName, propertiesToMatch){
+		
+		return new Promise((success, reject) => {
+		
+			var query = '';
+			var queryArgs = [pipelineId, stageName];
+			
+			for(var propertyName in propertiesToMatch){
+				query += ' and json_extract(properties, "$.' + propertyName + '") = ?';
+				queryArgs.push(propertiesToMatch[propertyName]);
+			}
+			
+			app.database.query(
+				'select build_stage_properties.* from build_stage_properties left join builds on build_stage_properties.build = builds.id where ' + 
+				'builds.pipeline = ? and builds.status = 0 and stageName = ? ' + query + ' order by builds.id desc',
+				queryArgs,
+				function(err, results){
+				
+				if(err){
+					return reject(err);
+				}
+				
+				var row = null;
+				
+				if(results.length){
+					row = results[0];
+					row.properties = JSON.parse(row.properties);
+				}
+				
+				// Run the success function with the result:
+				success(row);
+			});
+			
+		});
+	};
+	
+	/*
 	* Set the build status. Setting it to '2' (building) also sets the 'started' time.
 	*/
 	app.build.setStatus = function(id, status){
