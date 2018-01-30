@@ -43,7 +43,7 @@ module.exports = (stage, app) => {
 		var set = config.sets[i];
 		
 		// Add the file promise and add into the files array:
-		filePromises.push(getFilePromise(set).then(setFiles => transferSets.push({
+		filePromises.push(getFilePromise(set, stage, app).then(setFiles => transferSets.push({
 			files: setFiles,
 			target: set.target,
 			source_workspace_path: set.source_workspace_path
@@ -154,11 +154,11 @@ module.exports = (stage, app) => {
 /*
 * Returns a promise which resolves to an array of file paths.
 */
-function getFilePromise(set){
+function getFilePromise(set, stage, app){
 
 	if(typeof set.source === 'function'){
 		// Invoke it now:
-		return Promise.resolve(set.source(set.options));
+		return Promise.resolve(set.source(stage, app, set));
 	}else if(Array.isArray(set.source)){
 		// Already got an array of files.
 		return Promise.resolve(set.source);
