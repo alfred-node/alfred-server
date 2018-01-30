@@ -10,7 +10,9 @@ var async = require('async');
  {
 	sets:[
 		{
-			source: GLOB_PATH | FUNCTION | ARRAY, // Sources are an array of filepaths relative to the target and the workspace path
+			source: GLOB_PATH | FUNCTION | ARRAY, // Sources are an array of filepaths relative to the target and the workspace path.
+													Each file can also be {status: 'deleted', path: '...'}
+													where status is any of delete, deleted, removed, renamed, put, added, copied, modified, typechange
 		    source_options: GLOB_OPTIONS,
 			source_workspace_path: OPTIONAL_PATH_RELATIVE_TO_WORKSPACE,
 		    target: BASEPATH
@@ -99,11 +101,11 @@ module.exports = (stage, app) => {
 								}
 								
 								var filePath = file;
-								var action = 'put';
+								var status = 'put';
 								
-								if(file.action){
-									// {action: 'delete', path: '..'}
-									action = file.action;
+								if(file.status){
+									// {status: 'delete', path: '..'}
+									status = file.status;
 									filePath = file.path;
 								}
 								
@@ -120,7 +122,11 @@ module.exports = (stage, app) => {
 								// Complete remote path is..
 								var remotePath = targetBasePath + filePath;
 								
-								if(action == 'put'){
+								if(status == 'delete' || status == 'deleted' || status == 'removed'){
+									// Delete
+									ftpServer.server.delete(remotePath, doneUpload);
+									
+								}else if(status =='put' || status =='added' || status == 'copied' || status =='modified' || status == 'typechange'){
 									// Upload
 									
 									// Complete local path is..
@@ -128,10 +134,32 @@ module.exports = (stage, app) => {
 									
 									ftpServer.server.put(srcPath, remotePath, doneUpload);
 									
-								}else if(action == 'delete'){
+								}else if(status == 'renamed'){
 									
-									// Delete
-									ftpServer.server.delete(remotePath, doneUpload);
+									// Complete local path is..
+									var srcPath = workspaceBasePath + filePath;
+									
+									// Both delete and upload:
+									if(file.oldpath){
+										
+										var oldPath = file.oldpath;
+										
+										if(oldPath[0] == '/'){
+											// Should be fairly rare - chop this off:
+											oldPath = oldPath.substring(1);
+										}
+										
+										// Delete the old one first:
+										ftpServer.server.delete(targetBasePath + oldPath, () => {
+											// Upload the new one:
+											ftpServer.server.put(srcPath, remotePath, doneUpload);
+										});
+										
+									}else{
+										// Old path not specified - just a regular upload@
+										ftpServer.server.put(srcPath, remotePath, doneUpload);
+									}
+									
 								}
 								
 							},
