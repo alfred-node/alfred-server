@@ -28,7 +28,7 @@ module.exports = (stage, app) => {
 	
 	// Branch to use:
 	if(!config.branch){
-		config.branch = "master";
+		config.branch = stage.workspace.branch || "master";
 	}
 	
 	// Local directory to checkout to:
