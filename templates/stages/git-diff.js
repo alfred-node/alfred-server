@@ -1,3 +1,5 @@
+var glob = require('glob');
+
 /*
 * Generates a diff between the current head and the commit on the same branch that this pipe was at last time it ran successfully.
 */
@@ -29,35 +31,51 @@ module.exports = (stage, app) => {
 			// Get the sha of the latest build, if there was a build found (so we can diff relative to that):
 			var relativeToCommit = latestBuild ? latestBuild.properties.commit : null;
 			
-			if(relativeToCommit == null){
-				// We'll need to get a root commit and diff relative to that instead.
-				relativeToCommit = getRootCommit(pullInfo.head).then(root => root.sha());
+			if(relativeToCommit){
+				// Diff the current head relative to the given commit:
+				return pullInfo.repository.diff(relativeToCommit, pullInfo.head.sha())
+					.then(diffs => {
+						pullInfo.diff = diffs.map(diff => {
+							return {
+								path: diff.path,
+								status: diff.status
+							};
+						});
+					});
+			}else{
+				// Glob the directory:
+				
+				return new Promise((success, reject) => {
+					
+					var pattern = workspace.path + pullInfo.localPath;
+					
+					if(pattern[pattern.length - 1] != '/'){
+						pattern += '/';
+					}
+					
+					// All files (not directories):
+					glob(pattern + '**/*', {nodir: true}, (err, filePaths) => {
+						pullInfo.diff = filePaths ? filePaths.map(path => {
+							path = path.substring(pattern.length);
+							return {
+								path,
+								status: 'added'
+							};
+						}) : [];
+						
+						// Ok!
+						success();
+					})
+				})
+				
 			}
 			
-			// Diff the current head relative to the given commit:
-			Promise.resolve(relativeToCommit)
-				.then(relativeToCommit => pullInfo.repository.diff(relativeToCommit, pullInfo.head.sha()))
-				.then(console.log);
-			
 		});
+		
+		promises.push(prom);
 		
 	}
 	
 	// Wait for them all:
-	return Promise.all(promises);
+	return Promise.all(promises).then(() => console.log('Diff completed')); // this console.log seems to be necessary for the stage to complete?
 };
-
-/*
-* Walks the history to find the root commit.
-* This is used when no previous successful build is found.
-*/
-function getRootCommit(forCommit){
-	return new Promise((success, reject) => {
-		var hist = forCommit.history();
-		hist.on('end', commits => {
-			// If there is no history then the given one is the root.
-			success(commits && commits.length ? commits[commits.length-1] : forCommit);
-		});
-		hist.start();
-	});
-}
