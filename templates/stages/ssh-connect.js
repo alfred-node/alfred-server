@@ -41,10 +41,9 @@ module.exports = (stage, app) => {
 	return server.connect({
 	  host: host,
 	  username: creds.username,
-	  privateKey: creds.privateKey
+	  privateKey: creds.privatekey
 	}).then(() => {
 		// push the server link into the pipe's workspace:
-		
 		if(!stage.workspace.sshServers){
 			stage.workspace.sshServers = [];
 		}
@@ -53,8 +52,5 @@ module.exports = (stage, app) => {
 			config,
 			server
 		});
-		
-		// Ok!
-		success();
-	});
+	}).catch(console.log);
 }
