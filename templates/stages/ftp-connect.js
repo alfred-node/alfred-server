@@ -19,6 +19,9 @@ module.exports = (stage, app) => {
 				stage.workspace.ftpServers = [];
 			}
 			
+			// Clear pwd from stored config:
+			delete config.password;
+			
 			// Cache the config in the pipelines memory workspace so other stages can use the reference directly:
 			var serverInfo = {
 				server,

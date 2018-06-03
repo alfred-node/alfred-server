@@ -35,6 +35,9 @@ module.exports = (stage, app) => {
 	// Load up the credentials:
 	var creds = app.credentials.load(config.credentials);
 	
+	// Clear creds from stored config:
+	delete config.credentials;
+	
 	var server = new node_ssh();
 	
 	// Connect now;
