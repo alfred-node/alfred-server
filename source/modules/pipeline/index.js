@@ -49,6 +49,12 @@ module.exports = app => {
 			errors: [],
 			
 			/*
+			* These are for a summary of what happened during this pipe run. For example, commit messages. (type of 'commit').
+			* {type: '..', text: ''}
+			*/
+			messages: [],
+			
+			/*
 			* The workspace path.
 			*/
 			path: __pipe.path + 'workspace/'
