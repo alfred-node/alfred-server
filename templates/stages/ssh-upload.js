@@ -1,4 +1,7 @@
-node_ssh = require('node-ssh')
+var node_ssh = require('node-ssh');
+var glob = require('glob');
+var async = require('async');
+var fs = require('fs');
 
 /*
  ssh connect. Config is required otherwise this stage will fail.
@@ -85,7 +88,7 @@ module.exports = (stage, app) => {
 						}
 						
 						// Relative to the WS:
-						var workspaceBasePath = stage.pipeline.workspaceDir + '/' + (set.source_workspace_path || '');
+						var workspaceBasePath = stage.pipeline.workspace.path + (set.source_workspace_path || '');
 						
 						// For each file in the transfer set..
 						async.eachSeries(
@@ -122,7 +125,7 @@ module.exports = (stage, app) => {
 								
 								if(status == 'delete' || status == 'deleted' || status == 'removed'){
 									// Delete
-									sshServer.server.delete(remotePath, doneUpload);
+									sshServer.server.exec('rm -f "' + remotePath + '"').then(doneUpload);
 									
 								}else if(status =='put' || status =='added' || status == 'copied' || status =='modified' || status == 'typechange'){
 									// Upload
@@ -131,7 +134,7 @@ module.exports = (stage, app) => {
 									var srcPath = workspaceBasePath + filePath;
 									
 									// Upload the file:
-									sshServer.server.putFile(srcPath, remotePath).then(doneUpload);
+									sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
 									
 								}else if(status == 'renamed'){
 									
@@ -149,14 +152,17 @@ module.exports = (stage, app) => {
 										}
 										
 										// Delete the old one first:
-										sshServer.server.exec('rm "' + targetBasePath + oldPath + '"').then(() => {
+										sshServer.server.exec('rm -f "' + (targetBasePath + oldPath) + '"').then(() => {
 											// Upload the new one:
-											sshServer.server.putFile(srcPath, remotePath).then(doneUpload);
-										});
+											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
+										}).catch(() => {
+											// It didn't exist anyway
+											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
+										})
 										
 									}else{
 										// Old path not specified - just a regular upload@
-										sshServer.server.putFile(srcPath, remotePath).then(doneUpload);
+										sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
 									}
 									
 								}
@@ -193,7 +199,7 @@ function getFilePromise(set, stage, app){
 	
 	return new Promise((resolve, reject) => {
 		// Glob grab the files:
-		glob(set.source, set.options, function (er, files) {
+		glob(set.source, set.options || {nodir: true}, function (er, files) {
 			if(er){
 				return reject(er);
 			}

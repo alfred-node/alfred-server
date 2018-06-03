@@ -87,7 +87,7 @@ module.exports = (stage, app) => {
 						}
 						
 						// Relative to the WS:
-						var workspaceBasePath = stage.pipeline.workspaceDir + '/' + (set.source_workspace_path || '');
+						var workspaceBasePath = stage.pipeline.workspace.path + '/' + (set.source_workspace_path || '');
 						
 						// For each file in the transfer set..
 						async.eachSeries(
@@ -194,7 +194,7 @@ function getFilePromise(set, stage, app){
 	
 	return new Promise((resolve, reject) => {
 		// Glob grab the files:
-		glob(set.source, set.options, function (er, files) {
+		glob(set.source, set.options || {nodir: true}, function (er, files) {
 			if(er){
 				return reject(er);
 			}

@@ -14,6 +14,8 @@ module.exports = app => {
 	
 	app.pipeline = function(id){
 		
+		var __pipe = this;
+		
 		/*
 		* ID of this pipeline. References
 		*/
@@ -25,9 +27,9 @@ module.exports = app => {
 		this.path = app.settings.configPath + '/pipelines/' + id + '/';
 		
 		/*
-		* A running pipe cd's to this.
+		* Legacy method to access this.workspace.path
 		*/
-		this.workspaceDir = () => this.path + 'workspace/';
+		this.workspaceDir = () => this.workspace.path;
 		
 		/*
 		* The stages of the pipeline. This should never have stages with the same name.
@@ -44,7 +46,12 @@ module.exports = app => {
 			* Populated if a stage fails. When one does, the error is added here and then all following stages 
 			* are checked for a 'runOnError' property
 			*/
-			errors: []
+			errors: [],
+			
+			/*
+			* The workspace path.
+			*/
+			path: __pipe.path + 'workspace/'
 		};
 		
 		/* 
@@ -361,7 +368,7 @@ module.exports = app => {
 				}
 			
 				// Change to the pipeline's workspace:
-				process.chdir(this.workspaceDir());
+				process.chdir(this.workspace.path);
 				
 				return runStages(this.stages, events, buildInfo).then(() => {
 					// Restore cd:
