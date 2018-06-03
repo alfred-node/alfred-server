@@ -72,6 +72,7 @@ module.exports = app => {
 						return git.Clone(remotePath, localPath, cloneOptions).then(repo => repository = repo);
 				  })
 				  .then(() => branch && repository.checkoutBranch(branch))
+				  .then(() => branch && repository.mergeBranches(branch, "origin/" + branch))
 				  .then(() => fulfil(repository))
 				  .catch(console.log);
 			});
