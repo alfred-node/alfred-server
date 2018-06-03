@@ -32,12 +32,19 @@ module.exports = (stage, app) => {
 	var config = stage.config;
 	
 	if(!config.sets){
-		config.sets = [{
-			source: config.source,
-			source_workspace_path: config.source_workspace_path,
-			source_options: config.source_options,
-			target: config.target
-		}];
+		
+		if(!config.source){
+			// Use change sets.
+			config.sets = stage.workspace.changedFiles;
+		}else{
+			// Just one change set:
+			config.sets = [{
+				source: config.source,
+				source_workspace_path: config.source_workspace_path,
+				source_options: config.source_options,
+				target: config.target
+			}];
+		}
 	}
 	
 	// For each transfer set..
