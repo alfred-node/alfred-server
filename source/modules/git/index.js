@@ -32,7 +32,7 @@ module.exports = app => {
 					
 					if(creds.publickkey){
 						// SSH:
-						return git.Cred.sshKeyMemoryNew(creds.username, creds.publickkey, creds.privatekey, creds.passphrase);
+						return git.Cred.sshKeyMemoryNew(creds.username, creds.publickkey, creds.privatekey, creds.passphrase || '');
 					}
 					
 					if(creds.username){
@@ -72,7 +72,8 @@ module.exports = app => {
 						return git.Clone(remotePath, localPath, cloneOptions).then(repo => repository = repo);
 				  })
 				  .then(() => branch && repository.checkoutBranch(branch))
-				  .then(() => fulfil(repository));
+				  .then(() => fulfil(repository))
+				  .catch(console.log);
 			});
 		},
 		checkout: (repository, branch, options) => {
