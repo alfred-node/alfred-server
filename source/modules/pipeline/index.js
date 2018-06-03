@@ -365,6 +365,9 @@ module.exports = app => {
 		*/
 		this.run = function(settingsOverride, events){
 			
+			// Workspace config:
+			settingsOverride.workspace && Object.assign(this.workspace, settingsOverride.workspace);
+			
 			this.workspace.startTime = new Date();
 			
 			// First, generate the build metadata:
