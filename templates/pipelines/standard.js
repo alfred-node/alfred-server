@@ -12,6 +12,7 @@ module.exports = (pipeline, app) => {
    
    // 1. Pull from the git repo:
    pipeline.add("git-pull");
+   pipeline.add("git-diff");
    
    // 2. Detect and run tests (looks for dirs in pulled repo's called "test"):
    // pipeline.add("test");
@@ -23,7 +24,7 @@ module.exports = (pipeline, app) => {
    // pipeline.add('ssh-exec');
    
    // 5. Update slack:
-   // pipeline.add("slack-notification");
+   pipeline.add("slack-notify");
    
    // Alternatively you can use a standard stage but with a different name (so you can e.g. use them multiple times):
    /*

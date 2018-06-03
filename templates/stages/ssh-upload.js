@@ -71,6 +71,7 @@ module.exports = (stage, app) => {
 			// Ok!
 			serverPromises.push(new Promise((success, reject) => {
 				
+				
 				// For each transfer set..
 				async.eachSeries(
 					transferSets,
@@ -168,11 +169,36 @@ module.exports = (stage, app) => {
 					success
 				);
 				
-			});
+			}));
 			
 		}
 		
 		// Await all:
 		return Promise.all(serverPromises);
 	});
+}
+
+/*
+* Returns a promise which resolves to an array of file paths.
+*/
+function getFilePromise(set, stage, app){
+
+	if(typeof set.source === 'function'){
+		// Invoke it now:
+		return Promise.resolve(set.source(stage, app, set));
+	}else if(Array.isArray(set.source)){
+		// Already got an array of files.
+		return Promise.resolve(set.source);
+	}
+	
+	return new Promise((resolve, reject) => {
+		// Glob grab the files:
+		glob(set.source, set.options, function (er, files) {
+			if(er){
+				return reject(er);
+			}
+			resolve(files);
+		});
+	});
+	
 }

@@ -170,7 +170,7 @@ module.exports = (stage, app) => {
 					success
 				);
 				
-			});
+			}));
 			
 		}
 		
