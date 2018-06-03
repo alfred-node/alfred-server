@@ -2,10 +2,6 @@ var node_ssh = require('node-ssh');
 var glob = require('glob');
 var async = require('async');
 var fs = require('fs');
-var tar = require('tar');
-var tempfile = require('tempfile');
-var path = require('path');
-
 
 /*
  ssh connect. Config is required otherwise this stage will fail.
@@ -58,8 +54,7 @@ module.exports = (stage, app) => {
 		
 	}
 	
-	return Promise.all(filePromises)
-	.then(() => {
+	Promise.all(filePromises).then(() => {
 		// Got all known files - let's start uploading!
 		// We'll be doing all the servers in parallel:
 		var servers = stage.workspace.sshServers;
@@ -100,114 +95,98 @@ module.exports = (stage, app) => {
 							workspaceBasePath += '/';
 						}
 						
-						var commands = [];
-						var filesToCompress = [];
-						
 						// For each file in the transfer set..
-						for(var i=0;i<set.files.length;i++){
-							var file = set.files[i];
-							
-							// Target path is..
-							if(!file){
-								// No file - skip nulls
-								continue;
-							}
-						
-							var filePath = file;
-							var status = 'put';
-							
-							if(file.status){
-								// {status: 'delete', path: '..'}
-								status = file.status;
-								filePath = file.path;
-							}
-							
-							if(!filePath){
-								// Skip no path
-								continue;
-							}
-							
-							if(filePath[0] == '/'){
-								// Should be fairly rare - chop this off:
-								filePath = filePath.substring(1);
-							}
-							
-							if(status == 'delete' || status == 'deleted' || status == 'removed'){
+						async.eachSeries(
+							set.files,
+							(file, doneUpload) => {
 								
-								// Delete
-								commands.push('rm -f "' + (targetBasePath + filePath) + '"');
-								
-							}else if(status =='put' || status =='added' || status == 'copied' || status =='modified' || status == 'typechange'){
-								// Upload
-								
-								filesToCompress.push(filePath);
-								
-							}else if(status == 'renamed'){
-								
-								// Both delete and upload:
-								if(file.oldpath){
-									
-									var oldPath = file.oldpath;
-									
-									if(oldPath[0] == '/'){
-										// Should be fairly rare - chop this off:
-										oldPath = oldPath.substring(1);
-									}
-									
-									commands.push('rm -f "' + (targetBasePath + oldPath) + '"');
-									
+								// Target path is..
+								if(!file){
+									// No file - skip nulls
+									return doneUpload();
 								}
 								
-								filesToCompress.push(filePath);
-							
-							}
-							
-						}
-						
-						var promise = null;
-						
-						if(commands.length){
-							// Run all the delete commands:
-							promise = sshServer.server.exec(commands.join('\n'));
-						}else{
-							promise = true;
-						}
-						
-						var tempFile = tempfile('.tar.gz');
-						
-						Promise.resolve(promise)
-							.then(() => {
-								if(filesToCompress && filesToCompress.length){
-									// Compress the files:
-									tar.c( // or tar.create
-										{
-											cwd: workspaceBasePath,
-											gzip: true
-										},
-										filesToCompress
-									)
-									.pipe(fs.createWriteStream(tempFile))
-									.on('finish', function(){
-										// Compressed the archive - upload it now:
-										var remotePath = '/alfred/temp/' + path.basename(tempFile);
+								var filePath = file;
+								var status = 'put';
+								
+								if(file.status){
+									// {status: 'delete', path: '..'}
+									status = file.status;
+									filePath = file.path;
+								}
+								
+								if(!filePath){
+									// Skip no path
+									return doneUpload();
+								}
+								
+								if(filePath[0] == '/'){
+									// Should be fairly rare - chop this off:
+									filePath = filePath.substring(1);
+								}
+								
+								// Complete remote path is..
+								var remotePath = targetBasePath + filePath;
+								
+								if(status == 'delete' || status == 'deleted' || status == 'removed'){
+									// Delete
+									sshServer.server.exec('rm -f "' + remotePath + '"').then(doneUpload);
+									
+								}else if(status =='put' || status =='added' || status == 'copied' || status =='modified' || status == 'typechange'){
+									// Upload
+									
+									// Complete local path is..
+									var srcPath = workspaceBasePath + filePath;
+									
+									// Upload the file:
+									sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+										console.notice('File upload failed', srcPath, remotePath, e);
+										doneUpload()
+									});
+									
+								}else if(status == 'renamed'){
+									
+									// Complete local path is..
+									var srcPath = workspaceBasePath + filePath;
+									
+									// Both delete and upload:
+									if(file.oldpath){
 										
-										sshServer.server.putFile(tempFile, remotePath)
-										.then(() => sshServer.server.exec('node /alfred/patch "' + remotePath + '" "' + targetBasePath + '"', [], {stream: 'stdout'}))
-										.then((result) => {
-											// Display any output:
-											result && console.log(result);
-											
-											// Delete the archive locally:
-											fs.unlink(tempFile, function(){
-												doneSet();
+										var oldPath = file.oldpath;
+										
+										if(oldPath[0] == '/'){
+											// Should be fairly rare - chop this off:
+											oldPath = oldPath.substring(1);
+										}
+										
+										// Delete the old one first:
+										sshServer.server.exec('rm -f "' + (targetBasePath + oldPath) + '"').then(() => {
+											// Upload the new one:
+											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+												console.notice('File upload failed', srcPath, remotePath, e);
+												doneUpload()
+											});
+										}).catch(() => {
+											// It didn't exist anyway
+											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+												console.notice('File upload failed', srcPath, remotePath, e);
+												doneUpload()
 											});
 										})
-									})
-								}else{
-									// Nothing to upload - we're done:
-									doneSet();
+										
+									}else{
+										// Old path not specified - just a regular upload@
+										sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+											console.notice('File upload failed', srcPath, remotePath, e);
+											doneUpload()
+										});
+									}
+									
 								}
-							})
+								
+							},
+							doneSet
+						);
 						
 					},
 					success
@@ -218,7 +197,7 @@ module.exports = (stage, app) => {
 		}
 		
 		// Await all:
-		return Promise.all(serverPromises).then(() => console.log('SSH upload complete'));
+		return Promise.all(serverPromises);
 	});
 }
 

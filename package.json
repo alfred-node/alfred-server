@@ -36,6 +36,8 @@
     "password-hash-and-salt": "^0.1.4",
     "randomstring": "^1.1.5",
     "slack-notify": "^0.1.6",
-    "ssh2": "^0.5.5"
+    "ssh2": "^0.5.5",
+    "tar": "^4.4.4",
+    "tempfile": "^2.0.0"
   }
 }
