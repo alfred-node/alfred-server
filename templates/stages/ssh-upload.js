@@ -30,6 +30,7 @@ module.exports = (stage, app) => {
 	if(!config.sets){
 		config.sets = [{
 			source: config.source,
+			source_workspace_path: config.source_workspace_path,
 			source_options: config.source_options,
 			target: config.target
 		}];
@@ -90,6 +91,10 @@ module.exports = (stage, app) => {
 						// Relative to the WS:
 						var workspaceBasePath = stage.pipeline.workspace.path + (set.source_workspace_path || '');
 						
+						if(workspaceBasePath[workspaceBasePath.length - 1] != '/'){
+							workspaceBasePath += '/';
+						}
+						
 						// For each file in the transfer set..
 						async.eachSeries(
 							set.files,
@@ -134,7 +139,10 @@ module.exports = (stage, app) => {
 									var srcPath = workspaceBasePath + filePath;
 									
 									// Upload the file:
-									sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
+									sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+										console.notice('File upload failed', srcPath, remotePath, e);
+										doneUpload()
+									});
 									
 								}else if(status == 'renamed'){
 									
@@ -154,15 +162,24 @@ module.exports = (stage, app) => {
 										// Delete the old one first:
 										sshServer.server.exec('rm -f "' + (targetBasePath + oldPath) + '"').then(() => {
 											// Upload the new one:
-											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
+											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+												console.notice('File upload failed', srcPath, remotePath, e);
+												doneUpload()
+											});
 										}).catch(() => {
 											// It didn't exist anyway
-											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
+											sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+												console.notice('File upload failed', srcPath, remotePath, e);
+												doneUpload()
+											});
 										})
 										
 									}else{
 										// Old path not specified - just a regular upload@
-										sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(doneUpload);
+										sshServer.server.putFile(srcPath, remotePath).then(doneUpload).catch(e => {
+											console.notice('File upload failed', srcPath, remotePath, e);
+											doneUpload()
+										});
 									}
 									
 								}
@@ -188,7 +205,6 @@ module.exports = (stage, app) => {
 * Returns a promise which resolves to an array of file paths.
 */
 function getFilePromise(set, stage, app){
-
 	if(typeof set.source === 'function'){
 		// Invoke it now:
 		return Promise.resolve(set.source(stage, app, set));
