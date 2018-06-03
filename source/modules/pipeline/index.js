@@ -7,6 +7,14 @@ var process = require('process');
 var defaultCWD = process.cwd();
 
 /*
+* Require a file without caching it.
+*/
+function requireNoCache(path){
+	delete require.cache[require.resolve(path)];
+	return require(path);
+}
+
+/*
 * Alfred's beating heart! Used to represent a pipeline - a series of tasks to perform.
 */
 
@@ -69,7 +77,7 @@ module.exports = app => {
 			
 			if(typeof pipelineNameOrFunction === "string"){
 				// Include it:
-				pipelineNameOrFunction = require(app.settings.templatePath + '/pipelines/' + pipelineNameOrFunction);
+				pipelineNameOrFunction = requireNoCache(app.settings.templatePath + '/pipelines/' + pipelineNameOrFunction);
 			}
 			
 			// Always return a promise:
@@ -144,6 +152,13 @@ module.exports = app => {
 		* An internal function which creates a stage from a name/ method and optional default config. You generally shouldn't use this, unless you're modding the stages array.
 		*/
 		this.createStage = function(stageName, stageMethodOrFileName, stageConfigOverrides){
+			
+			if(!stageConfigOverrides && typeof stageMethodOrFileName == "object"){
+				// It's actually the config:
+				stageConfigOverrides = stageMethodOrFileName;
+				stageMethodOrFileName = null;
+			}
+			
 			if(!stageMethodOrFileName){
 				stageMethodOrFileName = stageName;
 			}
@@ -154,7 +169,7 @@ module.exports = app => {
 			
 			if(typeof stageMethodOrFileName === "string"){
 				// Include it:
-				stageMethodOrFileName = require(app.settings.templatePath + '/stages/' + stageMethodOrFileName);
+				stageMethodOrFileName = requireNoCache(app.settings.templatePath + '/stages/' + stageMethodOrFileName);
 			}
 			
 			var stage = {
@@ -404,7 +419,7 @@ module.exports = app => {
 		
 		var pipeline = new app.pipeline(id);
 		
-		var pipeFile = require(pipeline.path + 'pipeline.js');
+		var pipeFile = requireNoCache(pipeline.path + 'pipeline.js');
 		
 		return Promise.resolve(pipeFile(pipeline, app)).then(() => pipeline.run(settingsOverride, events));
 	};
