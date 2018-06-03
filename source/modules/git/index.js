@@ -71,7 +71,9 @@ module.exports = app => {
 					  // Unable to open the repo - clone it:
 						return git.Clone(remotePath, localPath, cloneOptions).then(repo => repository = repo);
 				  })
-				  .then(() => branch && repository.checkoutBranch(branch))
+				  .then(() => branch && repository.checkoutBranch(branch).catch(e => {
+					  // Already on this branch - ignore
+				  }))
 				  .then(() => branch && repository.mergeBranches(branch, "origin/" + branch))
 				  .then(() => fulfil(repository))
 				  .catch(console.log);
