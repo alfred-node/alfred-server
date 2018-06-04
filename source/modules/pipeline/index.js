@@ -365,9 +365,6 @@ module.exports = app => {
 		*/
 		this.run = function(settingsOverride, events){
 			
-			// Workspace config:
-			settingsOverride.workspace && Object.assign(this.workspace, settingsOverride.workspace);
-			
 			this.workspace.startTime = new Date();
 			
 			// First, generate the build metadata:
@@ -421,6 +418,9 @@ module.exports = app => {
 	app.pipeline.run = function(id, settingsOverride, events){
 		
 		var pipeline = new app.pipeline(id);
+		
+		// Workspace config:
+		settingsOverride.workspace && Object.assign(pipeline.workspace, settingsOverride.workspace);
 		
 		var pipeFile = requireNoCache(pipeline.path + 'pipeline.js');
 		
