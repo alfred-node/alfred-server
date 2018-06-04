@@ -142,7 +142,7 @@ module.exports = (stage, app) => {
 							if(status == 'delete' || status == 'deleted' || status == 'removed'){
 								
 								// Delete
-								commands.push('rm -f "' + (targetBasePath + filePath) + '"');
+								commands.push('sudo rm -f "' + (targetBasePath + filePath) + '"');
 								
 							}else if(status =='put' || status =='added' || status == 'copied' || status =='modified' || status == 'typechange'){
 								// Upload
@@ -161,7 +161,7 @@ module.exports = (stage, app) => {
 										oldPath = oldPath.substring(1);
 									}
 									
-									commands.push('rm -f "' + (targetBasePath + oldPath) + '"');
+									commands.push('sudo rm -f "' + (targetBasePath + oldPath) + '"');
 									
 								}
 								
@@ -215,6 +215,11 @@ module.exports = (stage, app) => {
 									doneSet();
 								}
 							})
+					.catch(e => {
+						// Note the error but we don't stall the pipe for it.
+						// (as it'll indicate either a file perm issue, or most likely, attempted to delete a file that didn't exist anyway)
+						console.log(e);
+					})
 						
 					},
 					success
