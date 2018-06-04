@@ -71,10 +71,10 @@ module.exports = app => {
 					  // Unable to open the repo - clone it:
 						return git.Clone(remotePath, localPath, cloneOptions).then(repo => repository = repo);
 				  })
-				  .then(() => branch && repository.checkoutBranch(branch).catch(e => {
+				  .then(() => branch && repository.getReference("refs/remotes/origin/" + branch))
+				  .then((ref) => branch && repository.checkoutRef(ref).catch(e => {
 					  // Already on this branch - ignore
 				  }))
-				  .then(() => branch && repository.mergeBranches(branch, "origin/" + branch))
 				  .then(() => fulfil(repository))
 				  .catch(console.log);
 			});
@@ -85,7 +85,7 @@ module.exports = app => {
 			  return repository.mergeBranches(branch, "origin/" + branch);
 			  }) */
 			  // Checkout target branch (head)
-		    return repository.checkoutBranch("origin/" + branch, options.checkout);
+		    return repository.checkoutBranch("refs/remotes/origin/" + branch, options.checkout);
 		}
 	};
 };
