@@ -90,8 +90,8 @@ module.exports = (stage, app) => {
 							workspace.changedFiles.push({
 								type: 'git-diff',
 								target: pullInfo.config.remote,
-								localPath: pullInfo.localPath,
-								files: pullInfo.diff
+								source_workspace_path: pullInfo.localPath,
+								source: pullInfo.diff
 							});
 						}
 						
