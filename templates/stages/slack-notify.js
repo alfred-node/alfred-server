@@ -17,7 +17,17 @@ module.exports = (stage, app) => {
 	// Start:
 	var slack = slackNotify(config.url);
 	
-	var pretext = workspace.build.pipelineName + ' #' + version.patch + (errors.length ? ' failed' : ' successful');
+	var pretext = workspace.build.pipelineName + ' #' + version.patch + (errors.length ? ' failed' : ' successful') + " in " + timeString(workspace.startTime);
+	
+	var messages = workspace.messages.map(msg => msg.text).join('\r\n');
+	
+	if(!messages){
+		messages = "No additional information provided.";
+	}
+	
+	if(errors.length){
+		messages = errors.join('\r\n') + '\r\n' + messages;
+	}
 	
 	return slack.send({
 	  icon_url: 'https://kulestar.com/Images/Alfred/logo.png',
@@ -29,7 +39,7 @@ module.exports = (stage, app) => {
             pretext: pretext,
             // title: "This is a blue link title",
             // title_link: "https://../",
-            text: (errors.length ? errors[0] : "Successful run" ) + " in " + timeString(workspace.startTime),
+            text: messages,
         }
 	  ]
 	});
