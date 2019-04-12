@@ -99,7 +99,7 @@ function startAlfred(settings) {
 			// Listen on the configured port:
 			expressHttp.listen(app.settings.port);
 			
-			console.ok('Alfred started');
+			console.ok('Alfred started on port ' + app.settings.port);
 			
 			success(app);
 		})
