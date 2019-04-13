@@ -79,7 +79,7 @@ function insertString(fields,existingArgs) {
 			paramString += ",";
 		}
 
-		fieldString += field;
+		fieldString += '`' + field + '`';
 		paramString += "?";
 
 		// Add to args set:
