@@ -194,7 +194,7 @@ module.exports = app => {
 		/*
 		* See add for more details. Unlike add, this replaces existing stages in their original position. Appended otherwise.
 		*/
-		this.replace = function(stage){
+		this.replace = function(stageName, stageMethodOrFileName, stageConfigOverrides){
 			// Create the stage to add:
 			var stage = this.createStage(stageName, stageMethodOrFileName, stageConfigOverrides);
 			
