@@ -70,6 +70,10 @@ module.exports = app => {
 			if(typeof pipelineNameOrFunction === "string"){
 				// Include it:
 				pipelineNameOrFunction = app.getTemplate('pipelines/' + pipelineNameOrFunction + '.js');
+				
+				if(pipelineNameOrFunction == null){
+					throw new Error('Imported pipeline template doesn\'t exist: ' + pipelineNameOrFunction + ' (used by pipeline ' + this.path + ')');
+				}
 			}
 			
 			// Always return a promise:
@@ -162,6 +166,10 @@ module.exports = app => {
 			if(typeof stageMethodOrFileName === "string"){
 				// Include it:
 				stageMethodOrFileName = app.getTemplate('stages/' + stageMethodOrFileName + '.js');
+				
+				if(stageMethodOrFileName == null){
+					throw new Error("Stage doesn't exist: " + stageMethodOrFileName + ' (used by pipeline ' + this.path + ')');
+				}
 			}
 			
 			var stage = {
@@ -379,9 +387,18 @@ module.exports = app => {
 				if(events && events.onStart){
 					events.onStart(this);
 				}
-			
-				// Change to the pipeline's workspace:
-				process.chdir(this.workspace.path);
+				
+				try{
+					// Change to the pipeline's workspace:
+					process.chdir(this.workspace.path);
+				}catch(e){
+					// Probably doesn't exist - try create:
+					if (fs.existsSync(this.workspace.path)){
+						throw e;
+					}else{
+						fs.mkdirSync(this.workspace.path);
+					}
+				}
 				
 				return runStages(this.stages, events, buildInfo).then(() => {
 					// Restore cd:
@@ -415,6 +432,8 @@ module.exports = app => {
 		settingsOverride.workspace && Object.assign(pipeline.workspace, settingsOverride.workspace);
 		
 		var pipeFile = app.getWatched(pipeline.path + 'pipeline.js');
+		
+		console.log(pipeFile);
 		
 		return Promise.resolve(pipeFile(pipeline, app)).then(() => pipeline.run(settingsOverride, events));
 	};
