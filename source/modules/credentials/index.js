@@ -51,6 +51,7 @@ module.exports = app => {
 			jsonfile.readFile(lookupPath, function(err, obj) {
 				if(err){
 					lookup = {};
+					save();
 					console.notice('Credentials lookup was not found. Created an empty one.');
 				}else{
 					// Decrypt using the pass:
