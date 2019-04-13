@@ -7,14 +7,6 @@ var process = require('process');
 var defaultCWD = process.cwd();
 
 /*
-* Require a file without caching it.
-*/
-function requireNoCache(path){
-	delete require.cache[require.resolve(path)];
-	return require(path);
-}
-
-/*
 * Alfred's beating heart! Used to represent a pipeline - a series of tasks to perform.
 */
 
@@ -77,7 +69,7 @@ module.exports = app => {
 			
 			if(typeof pipelineNameOrFunction === "string"){
 				// Include it:
-				pipelineNameOrFunction = requireNoCache(app.settings.templatePath + '/pipelines/' + pipelineNameOrFunction);
+				pipelineNameOrFunction = app.getTemplate('pipelines/' + pipelineNameOrFunction + '.js');
 			}
 			
 			// Always return a promise:
@@ -169,7 +161,7 @@ module.exports = app => {
 			
 			if(typeof stageMethodOrFileName === "string"){
 				// Include it:
-				stageMethodOrFileName = requireNoCache(app.settings.templatePath + '/stages/' + stageMethodOrFileName);
+				stageMethodOrFileName = app.getTemplate('stages/' + stageMethodOrFileName + '.js');
 			}
 			
 			var stage = {
@@ -422,7 +414,7 @@ module.exports = app => {
 		// Workspace config:
 		settingsOverride.workspace && Object.assign(pipeline.workspace, settingsOverride.workspace);
 		
-		var pipeFile = requireNoCache(pipeline.path + 'pipeline.js');
+		var pipeFile = app.getWatched(pipeline.path + 'pipeline.js');
 		
 		return Promise.resolve(pipeFile(pipeline, app)).then(() => pipeline.run(settingsOverride, events));
 	};
@@ -443,5 +435,55 @@ module.exports = app => {
 		});
 		
 	}
+	
+	/*
+	* Gets a stage/ pipeline template sequentially (as it's via require). 
+	* These can be overriden via a templates directory in your config dir.
+	* The return is null if not found.
+	*/
+	app.getTemplate = function(templatePath, asText){
+		var file = app.getWatched(path.resolve(app.settings.configPath + '/templates/' + templatePath), asText);
+		
+		if(file === null){
+			file = app.getWatched(path.resolve(app.settings.templatePath + '/' + templatePath), asText);
+		}
+		
+		return file;
+	}
+	 
+	var watchedFiles = {};
+	
+	// Uncaches the given resolved path if it changes
+	function watchFile(filePath){
+		
+		fs.watch(filePath, function(){
+			delete require.cache[filePath];
+		});
+		
+		return true;
+	}
+	
+	/* Gets file contents by require()ing it, and watching it for changes. */
+	app.getWatched = function(filePath, asText){
+		
+		if(!require.cache[filePath]){
+			
+			// First check it even exists:
+			if(!fs.existsSync(filePath)){
+				// Soft error here.
+				return null;
+			}
+			
+			if(!watchedFiles[filePath]){
+				// Note that it definitely exists due to the check above.
+				watchedFiles[filePath] = watchFile(filePath);
+			}
+		}
+		
+		if(asText){
+			return fs.readFileSync(filePath, {encoding: 'utf8'});
+		}
+		return require(filePath);
+	};
 	
 };
