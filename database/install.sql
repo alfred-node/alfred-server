@@ -67,7 +67,7 @@ DROP FUNCTION IF EXISTS utcSeconds;
 DELIMITER ;;
 CREATE FUNCTION utcSeconds(
 	seconds BIGINT
-) RETURNS DATE
+) RETURNS DATE DETERMINISTIC
 BEGIN
     RETURN DATE_ADD(FROM_UNIXTIME(0), INTERVAL + seconds SECOND);
 END;;
@@ -79,9 +79,9 @@ DROP FUNCTION IF EXISTS decimal_trim ;
 DELIMITER ;;
 CREATE FUNCTION decimal_trim(
   amount decimal(40,20)
-) RETURNS varchar(41)
+) RETURNS varchar(41) DETERMINISTIC
 BEGIN
-  --First Trim the 0's
+  -- First Trim the 0's
     RETURN TRIM(Trailing '.' FROM TRIM(Trailing '0' FROM amount));
 END;;
 DELIMITER ;
@@ -163,7 +163,6 @@ CREATE TABLE IF NOT EXISTS `groups` (
   `deleted` int(1) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
 --
 -- Table structure for table `pipelines`
