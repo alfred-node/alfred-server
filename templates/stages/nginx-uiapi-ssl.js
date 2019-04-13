@@ -11,6 +11,10 @@
 */
 
 module.exports = (stage, app) => {
+	if(!stage.config || !stage.config.domain){
+		return;
+	}
+	
 	// For each server (in parallel), run the nginx.js remote script:
 	var serverPromises = stage.workspace.sshServers.map(sshServer => sshServer.server.exec('node', ['/alfred/nginx.js', stage.config.domain], {stream: 'stdout'}));
 	
