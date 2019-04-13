@@ -43,20 +43,18 @@ module.exports = (stage, app) => {
 							};
 						});
 						
-						if(pullInfo.config.remote){
-							// Add as a change set:
-							if(!workspace.changedFiles){
-								workspace.changedFiles = [];
-							}
-							
-							// Add the change set:
-							workspace.changedFiles.push({
-								type: 'git-diff',
-								target: pullInfo.config.remote,
-								source_workspace_path: pullInfo.localPath,
-								source: pullInfo.diff
-							});
+						// Add as a change set:
+						if(!workspace.changedFiles){
+							workspace.changedFiles = [];
 						}
+						
+						// Add the change set:
+						workspace.changedFiles.push({
+							type: 'git-diff',
+							target: pullInfo.config.remote,
+							source_workspace_path: pullInfo.localPath,
+							source: pullInfo.diff
+						});
 						
 					});
 			}else{
@@ -80,20 +78,18 @@ module.exports = (stage, app) => {
 							};
 						}) : [];
 						
-						if(pullInfo.config.remote){
-							// Add as a change set:
-							if(!workspace.changedFiles){
-								workspace.changedFiles = [];
-							}
-							
-							// Add the change set:
-							workspace.changedFiles.push({
-								type: 'git-diff',
-								target: pullInfo.config.remote,
-								source_workspace_path: pullInfo.localPath,
-								source: pullInfo.diff
-							});
+						// Add as a change set:
+						if(!workspace.changedFiles){
+							workspace.changedFiles = [];
 						}
+						
+						// Add the change set:
+						workspace.changedFiles.push({
+							type: 'git-diff',
+							target: pullInfo.config.remote,
+							source_workspace_path: pullInfo.localPath,
+							source: pullInfo.diff
+						});
 						
 						// Ok!
 						success();
